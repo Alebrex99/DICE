@@ -1,0 +1,46 @@
+{{ block scripts }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+    <script src="{{ static 'js/bootstrap_components.js' }}"></script>
+    <script src="{{ static 'js/preloader.js' }}"></script>
+    <script src="{{ static 'js/format_numbers.js' }}"></script>
+    <script src="{{ static 'js/gradients.js' }}"></script>
+    <script src="{{ static 'js/mobile.js' }}"></script>
+    <script src="{{ static 'js/like_button.js' }}"></script>
+    <script src="{{ static 'js/interactions.js' }}"></script>
+    <script src="{{ static 'js/scrolling.js' }}"></script>
+    {{ if subsession.FEED == "DICE/T_Feed_Stories.html" }}
+    <script src="{{ static 'js/stories.js' }}"></script>
+    {{ elif subsession.FEED == "DICE/T_Feed_Insta.html" }}
+    <script src="{{ static 'js/dwell.js' }}"></script>
+    <script src="{{ static 'js/rowheights.js' }}"></script>
+    <script src="{{ static 'js/insta_feed.js' }}"></script>
+    {{ elif subsession.FEED == "DICE/T_Feed_Generic.html" }}
+    <script src="{{ static 'js/swipes.js' }}"></script>
+    {{ else }}
+    <script src="{{ static 'js/dwell.js' }}"></script>
+    <script src="{{ static 'js/rowheights.js' }}"></script>
+    {{ endif }}
+{{ endblock }}
+
+{{ block styles }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lobster&display=swap">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'css/user_icon.css' %}">
+    <link rel="stylesheet" href="{% static 'css/preloader_linkedin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/preloader_twitter.css' %}">
+    <link rel="stylesheet" href="{% static 'css/preloader_insta.css' %}">
+    {{ if subsession.FEED == "DICE/T_Feed_Generic.html" }}
+    <link rel="stylesheet" href="{% static 'css/styles_generic.css' %}">
+    {{ endif }}
+    {{ if subsession.FEED == "DICE/T_Feed_Stories.html" }}
+    <link rel="stylesheet" href="{% static 'css/styles_stories.css' %}">
+    {{ endif }}
+{{ endblock }}
+
+{{ block content }}
+    {{ include subsession.FEED }}
+{{ endblock }}
