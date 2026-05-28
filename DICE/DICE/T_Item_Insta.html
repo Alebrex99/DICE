@@ -35,17 +35,20 @@
                 <!-- NEW -->
                 <!-- Post media: video or image: DA TOGLIERE IL <a> oppure i controlli in base al fatto che i video siano annunci cliccabili o CLIP -->
                 <div class="promoted-content spons-post position-relative">
+                    {{ if i.video_available }}
+                    <!--<video class="w-100 img-fluid mt-2" style="object-fit: cover;"
+                            data-doc-id="{{ i.doc_id }}"
+                            controls playsinline preload="metadata">-->
+                    <video class="w-100 img-fluid mt-2" style="object-fit: cover;"
+                            data-doc-id="{{ i.doc_id }}"
+                            controls muted loop playsinline preload="auto">
+                        <source src="{{ i.media }}" type="video/mp4">
+                    </video>
+                    {{ else }}
                     <a href="{{i.target}}" target="_blank" style="text-decoration: none; cursor: pointer;">
-                        {{ if i.video_available }}
-                        <video class="w-100 img-fluid mt-2" style="object-fit: cover;"
-                               data-doc-id="{{ i.doc_id }}"
-                               controls playsinline preload="metadata">
-                            <source src="{{ i.media }}" type="video/mp4">
-                        </video>
-                        {{ else }}
                         <img src="{{i.media}}" class="w-100 img-fluid mt-2" style="object-fit: cover;" alt="{{i.alt_text}}">
-                        {{ endif }}
                     </a>
+                    {{ endif }}
                 </div>
                 <!-- -------------------------------------------- -->
 
@@ -133,9 +136,12 @@
                 <!-- NEW -->
                 <!-- Post media: video or image -->
                 {{ if i.video_available }}
+                <!--<video class="w-100 img-fluid mt-2" style="object-fit: cover;"
+                       data-doc-id="{{ i.doc_id }}"
+                       controls playsinline preload="metadata">-->
                 <video class="w-100 img-fluid mt-2" style="object-fit: cover;"
                        data-doc-id="{{ i.doc_id }}"
-                       controls playsinline preload="metadata">
+                       controls muted loop playsinline preload="auto">
                     <source src="{{ i.media }}" type="video/mp4">
                     Your browser does not support video playback.
                 </video>
