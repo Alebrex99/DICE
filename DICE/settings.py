@@ -1,5 +1,17 @@
 from os import environ
 
+"""
+Spiegazione base:
+- otree legge questo settings.py in directory padre
+- cerca tutte le SESSION_CONFIG specifiche per il social scelto e cerca la app_sequence, ovvero il nome del folder che contiene l'app tipo Django
+- se un SESSION_CONFIG non definsice alcune chiavi, queste sono prese da SESSION_CONFIG_DEFAULTS
+- otree carica il package che ha l'__init__.py con tutta l'applicazione backend
+- es. se scelto instagram -> usata SESSION_CONFIG con channel_type = "Insta" -> app_sequence = ['DICE'] -> carica DICE/__init__.py
+- creata la session con create_session(subsession) 
+  -> 
+
+"""
+
 SESSION_CONFIGS = [
     dict(
         name='Twitter',
@@ -55,7 +67,8 @@ SESSION_CONFIG_DEFAULTS = dict(
     skip_briefing = False,
     briefing = '', # '<h5>This could be your briefing</h5><p>Use HTML syntax to format your content to your liking.</p>',
     consent_form = '',
-    data_path=  "https://raw.githubusercontent.com/DICE-app/sample-feeds/refs/heads/main/feeds/sample_2x2_brand_safety.csv", #'DICE/static/data/sample_tweets.csv', #'DICE/static/data/9gag.csv', #  "https://raw.githubusercontent.com/Howquez/DICE/main/studies/frequency_capping/stimuli/brazil_pretest.csv",
+    #data_path=  "https://raw.githubusercontent.com/DICE-app/sample-feeds/refs/heads/main/feeds/sample_2x2_brand_safety.csv", #'DICE/static/data/sample_tweets.csv', #'DICE/static/data/9gag.csv', #  "https://raw.githubusercontent.com/Howquez/DICE/main/studies/frequency_capping/stimuli/brazil_pretest.csv",
+    data_path=  "DICE/static/data/sample_feed.csv", #'DICE/static/data/sample_tweets.csv', #'DICE/static/data/9gag.csv', #  "https://raw.githubusercontent.com/Howquez/DICE/main/studies/frequency_capping/stimuli/brazil_pretest.csv",
     delimiter=';',
     sort_by='datetime',
     condition_col='condition',
