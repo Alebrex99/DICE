@@ -205,10 +205,23 @@ def preprocessing(df, config):
     df['reposts'] = df['reposts'].fillna(0).astype(int)
     df['likes'] = df['likes'].fillna(0).astype(int)
 
-    # df['media'] = df['media'].apply(extract_first_url)
+    # VIDEO MODE----------------------------------
+    # OLD
+    ## df['media'] = df['media'].apply(extract_first_url)
+    # df['media'] = df['media'].astype(str).str.replace("'|,", '', regex=True)
+    # df['pic_available'] = np.where(df['media'].str.contains('http', na=False), True, False)
+    ## print(df[['pic_available', 'media']])
+    
+    # NEW
     df['media'] = df['media'].astype(str).str.replace("'|,", '', regex=True)
-    df['pic_available'] = np.where(df['media'].str.contains('http', na=False), True, False)
-    # print(df[['pic_available', 'media']])
+    df['pic_available'] = np.where(df['media'].str.contains('http', na=False), True, False) # Vero ogni volta che colonna media contiene URL
+    # Classify each media URL as video vs image (by file extension).
+    video_ext = r'\.(mp4|webm|ogg|ogv|mov|m4v)(\?.*)?$'
+    df['is_video'] = df['media'].str.contains(video_ext, case=False, regex=True, na=False) # Vero quando URL finisce con estensione video (regex data come video_ext)
+    df['video_available'] = df['pic_available'] & df['is_video'] # due nuovi flag per T_Feed_Insta mutuamente esclusivi
+    df['image_available'] = df['pic_available'] & ~df['is_video'] # la sigma vuol dire: vero se media è img, falso se video
+    # ----------------------------------------------
+
 
     # create a name icon as a profile pic
     df['profile_pic_available'] = df['user_image'].apply(is_url)
