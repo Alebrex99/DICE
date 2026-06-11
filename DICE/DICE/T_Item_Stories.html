@@ -7,17 +7,56 @@
      data-profile-pic-available="{{i.profile_pic_available}}"
      data-user-image="{{i.user_image}}"
      data-color-class="{{i.color_class}}"
-     data-icon="{{i.icon}}">
+     data-icon="{{i.icon}}"
+     data-is-video="{{ i.video_available }}">
 
+    <!-- VIDEO MODE ---------------------------------- -->
+    {{ if i.video_available }}
+        <!-- GitHub/CDN: native video, play/pause managed by stories.js on slide activation -->
+        <!-- Sizing is also set inline (mirrors .stories-bg-video) so it survives a stale CSS cache -->
+        <video class="stories-bg-video"
+               data-doc-id="{{ i.doc_id }}"
+               muted playsinline preload="auto"
+               loop
+               style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; z-index:1;">
+            <source src="{{ i.media }}" type="video/mp4">
+        </video>
+    {{ else }}
+    <!-- OLD: Image (original behavior) -->
     <!-- Blurred copy fills the letterbox area behind landscape images -->
     <img src="{{i.media}}" class="stories-bg-blur" alt="" aria-hidden="true">
     <!-- Sharp foreground image shown in full (contain, no cropping) -->
     <img src="{{i.media}}" class="stories-bg-img" alt="{{i.alt_text}}">
+    {{ endif }}
+    <!-- GOOGLE DRIVE VERSION:
+         To re-enable Drive video support in Stories, add an "if i.is_drive" branch
+         inside the "if i.video_available" block above. The Drive slide uses an iframe
+         with data-drive-src (no src=); stories.js (activateDriveIframe) injects the src
+         on slide activation. Use ?autoplay=1 in the URL — it works because reaching the
+         slide requires a tap (user gesture).
+         Files to update together: __init__.py, T_Item_Insta.html, insta_video.js, stories.js.
+         Search "GOOGLE DRIVE" in each of those files to find the matching sections.
+    -->
+    <!-- -------------------------------------------- -->
+
 
     <!-- Text caption (bottom area, above action bar) -->
     <div class="stories-caption">
         <p class="stories-caption-text">{{i.text}}</p>
+        {{ if i.sponsored }}
+        <!-- CTA Button -->
+            <a href="{{i.target}}" target="_blank" class="d-flex justify-content-between align-items-center px-3 py-2 text-decoration-none border-bottom" style="background-color: #fafafa;">
+                <div>
+                    <div class="fw-semibold text-dark" style="font-size: 14px;">{{i.username}}</div>
+                    <div class="text-muted" style="font-size: 12px;">{{i.handle}}</div>
+                </div>
+                <button class="btn btn-sm text-white rounded-3 px-3" type="button" style="background-color: #0095f6; font-size: 13px; font-weight: 600;">
+                    Learn more
+                </button>
+            </a>
+        {{ endif }}
     </div>
+
 
 </div>
 {{ endif }}

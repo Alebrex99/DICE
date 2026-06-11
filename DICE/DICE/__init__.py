@@ -205,7 +205,7 @@ def preprocessing(df, config):
     df['reposts'] = df['reposts'].fillna(0).astype(int)
     df['likes'] = df['likes'].fillna(0).astype(int)
 
-    # VIDEO MODE----------------------------------
+    # VIDEO MODE--------------------------------------------------------------------------------
     # OLD
     ## df['media'] = df['media'].apply(extract_first_url)
     # df['media'] = df['media'].astype(str).str.replace("'|,", '', regex=True)
@@ -220,7 +220,33 @@ def preprocessing(df, config):
     df['is_video'] = df['media'].str.contains(video_ext, case=False, regex=True, na=False) # Vero quando URL finisce con estensione video (regex data come video_ext)
     df['video_available'] = df['pic_available'] & df['is_video'] # due nuovi flag per T_Feed_Insta mutuamente esclusivi
     df['image_available'] = df['pic_available'] & ~df['is_video'] # la sigma vuol dire: vero se media è img, falso se video
-    # ----------------------------------------------
+    # -----------------------------------------------------------------------------------------
+
+    # --- GOOGLE DRIVE SUPPORT (uncomment to support Drive video links) --------------------
+    # Replace the three lines above with this block. Also search "GOOGLE DRIVE SUPPORT"
+    # in T_Item_Insta.html, T_Item_Stories.html, insta_video.js, stories.js and
+    # uncomment the matching sections there.
+    #
+    # Requirement: the Drive file must be shared as "Anyone with the link → Viewer".
+    # Drive iframes are cross-origin — JS cannot call play()/pause(); the only lever is
+    # setting/clearing the src attribute. Autoplay is browser-gesture-gated (works in
+    # Stories after a tap, not guaranteed in Instagram scroll).
+    #
+    # df['is_drive'] = df['media'].str.contains('drive.google.com', na=False)
+    # def drive_preview(url):
+    #     if 'drive.google.com' not in str(url):
+    #         return ''
+    #     file_id = ''
+    #     if '/file/d/' in url:
+    #         file_id = url.split('/file/d/')[1].split('/')[0]
+    #     elif 'id=' in url:
+    #         file_id = url.split('id=')[1].split('&')[0]
+    #     return f'https://drive.google.com/file/d/{file_id}/preview' if file_id else ''
+    # df['drive_embed'] = df['media'].apply(drive_preview)
+    # df['video_available'] = df['pic_available'] & (df['is_video'] | df['is_drive'])
+    # df['image_available'] = df['pic_available'] & ~df['is_video'] & ~df['is_drive']
+    # --------------------------------------------------------------------------------------
+    # VIDEO MODE END------------------------------------------------------------------------
 
 
     # create a name icon as a profile pic

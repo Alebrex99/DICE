@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (m.attributeName === 'class' && preloader.classList.contains('d-none')) {
                     obs.disconnect();
                     slideStartTime = Date.now();
+                    // VIDEO MODE: first slide waited for the preloader, so play its video now
+                    playCurrentSlideVideo();
                     startProgressAnimation(currentIndex);
                 }
             });
@@ -67,6 +69,8 @@ document.addEventListener('DOMContentLoaded', function () {
         obs.observe(preloader, { attributes: true });
     } else {
         slideStartTime = Date.now();
+        // VIDEO MODE: no preloader present, play the first slide's video immediately
+        playCurrentSlideVideo();
         startProgressAnimation(0);
     }
 
@@ -85,6 +89,15 @@ document.addEventListener('DOMContentLoaded', function () {
             var docId = storyItems[currentIndex].docId;
             likedStories[docId] = !likedStories[docId];
             updateHeartUI();
+        });
+    }
+
+    // --- Mute / unmute button (VIDEO MODE) ---
+    var muteBtn = document.getElementById('storiesMuteBtn');
+    if (muteBtn) {
+        muteBtn.addEventListener('click', function (e) {
+            e.stopPropagation(); // don't let the tap fall through to the nav tap-zones
+            toggleStoriesAudio();
         });
     }
 
@@ -159,6 +172,11 @@ function activateSlide(index, startTimer) {
     // Deactivate the outgoing slide
     if (currentIndex >= 0 && currentIndex < storyItems.length) {
         storyItems[currentIndex].el.classList.remove('active');
+        // VIDEO MODE --------------------------------
+        // Pause and reset the outgoing video (if any) so it starts from 0 if revisited
+        var prevVideo = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+        if (prevVideo) { prevVideo.pause(); prevVideo.currentTime = 0; }
+        // -------------------------------------------
     }
 
     currentIndex = index;
@@ -178,9 +196,82 @@ function activateSlide(index, startTimer) {
     slideStartTime = Date.now();
 
     if (startTimer !== false) {
+        // VIDEO MODE --------------------------------
+        // Play the incoming video (if any).
+        playCurrentSlideVideo();
+        // -------------------------------------------
         startProgressAnimation(index);
     }
 }
+
+// VIDEO MODE ------------------------------------
+// Global audio state. Videos MUST start muted because browsers block
+// autoplay-with-audio until a user gesture. The mute button (top-right) flips
+// this for all story videos at once, Instagram-style.
+var audioEnabled = false;
+
+// Play the video on the currently-active slide (if it has one). Used both by
+// activateSlide() and by the preloader observer, because the FIRST slide is
+// activated with startTimer=false and would otherwise never start its video.
+// The progress timer always uses storyDuration so researchers control pacing via
+// story_duration in settings.py regardless of video length. To use video duration
+// instead, drive startProgressAnimation off the video's `ended` event.
+function playCurrentSlideVideo() {
+    if (currentIndex < 0 || currentIndex >= storyItems.length) return;
+    var video = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+    if (!video) return;
+    video.currentTime = 0;
+    video.muted = !audioEnabled;
+
+    var attempt = video.play();
+    if (attempt && attempt.catch) {
+        attempt.catch(function () {
+            // Video data not buffered yet — retry once enough has loaded.
+            video.addEventListener('canplay', function once() {
+                video.removeEventListener('canplay', once);
+                video.play().catch(function () {});
+            });
+        });
+    }
+}
+
+// Toggle sound for ALL story videos at once and swap the speaker icon.
+/* GOOGLE DRIVE SUPPORT:
+   To add Drive iframe support in Stories, uncomment and restore the two functions below,
+   then add their calls back in three places:
+     1. activateSlide() deactivation block  → add:  deactivateDriveIframe(storyItems[currentIndex].el);
+     2. activateSlide() startTimer block    → add:  activateDriveIframe();
+     3. preloader MutationObserver callback → add:  activateDriveIframe();
+     4. else branch (no preloader)          → add:  activateDriveIframe();
+   Also enable: __init__.py (uncomment is_drive/drive_embed block),
+   T_Item_Stories.html (add the if i.is_drive iframe branch),
+   T_Item_Insta.html (add the Drive branch), insta_video.js (uncomment IFRAME+VIDEO block).
+
+function activateDriveIframe() {
+    if (currentIndex < 0 || currentIndex >= storyItems.length) return;
+    var iframe = storyItems[currentIndex].el.querySelector('iframe[data-drive-src]');
+    if (!iframe) return;
+    if (!iframe.src || iframe.src === window.location.href) {
+        iframe.src = iframe.getAttribute('data-drive-src');
+    }
+}
+
+function deactivateDriveIframe(slideEl) {
+    if (!slideEl) return;
+    var iframe = slideEl.querySelector('iframe[data-drive-src]');
+    if (iframe) { iframe.src = ''; }
+}
+*/
+function toggleStoriesAudio() {
+    audioEnabled = !audioEnabled;
+    storyItems.forEach(function (s) {
+        var v = s.el.querySelector('video.stories-bg-video');
+        if (v) v.muted = !audioEnabled;
+    });
+    var icon = document.getElementById('storiesMuteIcon');
+    if (icon) icon.className = audioEnabled ? 'bi bi-volume-up-fill' : 'bi bi-volume-mute-fill';
+}
+// -----------------------------------------------
 
 function goToNext() {
     if (currentIndex >= storyItems.length) return;
@@ -251,9 +342,14 @@ function startProgressAnimationFrom(index, startPct, duration) {
 function showEndSlide() {
     cancelAnimationFrame(animFrame);
 
-    // Hide last story slide
+    // Hide last story slide and stop its video
     if (currentIndex >= 0 && currentIndex < storyItems.length) {
         storyItems[currentIndex].el.classList.remove('active');
+
+        // VIDEO MODE --------------------------------
+        var lastVideo = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+        if (lastVideo) { lastVideo.muted = true; lastVideo.pause(); lastVideo.currentTime = 0; }
+        // ------------------------------------------
     }
     currentIndex = storyItems.length; // sentinel: beyond range
 

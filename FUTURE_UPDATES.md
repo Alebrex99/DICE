@@ -445,3 +445,136 @@ And in the data row yield, add `p.watch_time_data` at the end.
 ```
 Only videos the participant actually played appear. Videos scrolled past without interaction
 are absent (duration = 0 is not written, unlike DICE-tiktok which writes a row for every video).
+
+---
+
+## UPDATE E — Uniform `<video>` tag for Drive (ATTEMPTED — REVERTED)
+
+### What was attempted and why
+
+The goal was to make Google Drive videos behave identically to GitHub raw videos: autoplay
+on scroll via the `IntersectionObserver` in `insta_video.js`. The iframe approach (current
+working state from UPDATE B) cannot be controlled by JavaScript due to the browser's
+same-origin policy — the Drive player runs on `drive.google.com` and exposes no postMessage
+API for play/pause/mute.
+
+The attempt had two parts:
+
+**`__init__.py`** — replaced `drive_preview()` with a `drive_direct()` function that
+normalised Drive sharing URLs to the direct-download format and wrote them back into the
+`media` column:
+```python
+def drive_direct(url):
+    if 'drive.google.com' not in str(url):
+        return url
+    if '/file/d/' in url:
+        file_id = url.split('/file/d/')[1].split('/')[0]
+        return f'https://drive.google.com/uc?id={file_id}'
+    if 'id=' in url:
+        file_id = url.split('id=')[1].split('&')[0]
+        return f'https://drive.google.com/uc?id={file_id}'
+    return url
+df.loc[df['is_drive'], 'media'] = df.loc[df['is_drive'], 'media'].apply(drive_direct)
+```
+
+**`T_Item_Insta.html`** — removed the `{{if i.is_drive}}` iframe sub-branch so all
+`video_available` items (GitHub and Drive alike) rendered through the same `<video>` tag:
+```html
+{{ if i.video_available }}
+<video class="w-100 img-fluid mt-2" style="object-fit: cover;"
+    data-doc-id="{{ i.doc_id }}"
+    muted loop playsinline preload="auto">
+    <source src="{{ i.media }}" type="video/mp4">
+</video>
+{{ else }}
+<img ...>
+{{ endif }}
+```
+
+### Why it failed
+
+Google Drive's `uc?id=FILE_ID` endpoint does not serve files with the HTTP response headers
+that the browser's native video engine requires:
+
+| Requirement | Drive `uc?id=` behaviour |
+|---|---|
+| `Content-Range` (byte-range requests for seeking/streaming) | Not supported → browser cannot seek or buffer ahead |
+| `Content-Type: video/mp4` | Sometimes served as `application/octet-stream` |
+| Inline playback (`Content-Disposition: inline`) | Served as `attachment` → browser tries to download, not play |
+| Cross-origin media (`CORS`) | No `Access-Control-Allow-Origin` header on some redirects |
+| Files > ~25 MB | Returns an HTML virus-scan confirmation page instead of video bytes |
+
+**Observed result:** `<video>` element displayed a black rectangle with native controls.
+Controls appeared but were unresponsive. `IntersectionObserver` called `.play()` correctly,
+but the Promise rejected silently (`.catch(function(){})`) because no valid media stream
+was available. The video never played and no error was shown to the user.
+
+The `uc?id=` tricks and `confirm=t` bypass parameters that occasionally appear in forum posts
+are undocumented, unstable across Google updates, and still fail for large files.
+
+### Current state after revert
+
+Both files were reverted to the working UPDATE B state:
+- `drive_preview()` in `__init__.py` builds `/preview` embed URLs → stored in `drive_embed` column
+- `T_Item_Insta.html` has the `{{if i.is_drive}}` iframe sub-branch in both sponsored and organic blocks
+- Drive videos display via Drive's own iframe player (manual play, no autoplay, Drive controls)
+- GitHub raw `.mp4` videos continue to use the `<video>` tag with full autoplay and mute control
+
+### Paths forward (if uniform autoplay for Drive is needed in the future)
+
+**Option 1 — Move Drive videos to GitHub raw (recommended)**
+Simply upload the `.mp4` files to the GitHub repo and use
+`https://raw.githubusercontent.com/<user>/<repo>/main/<path>.mp4` in the CSV.
+Already works perfectly. No code change needed. GitHub has a soft 100 MB per-file
+limit; use GitHub Releases (`/releases/download/`) for larger files.
+
+**Option 2 — Use a real CDN or object storage**
+Services that serve files with proper `Content-Range`, CORS, and `Content-Type` headers:
+- **AWS S3** (public bucket) or **Cloudflare R2** — direct `https://<bucket>.s3.amazonaws.com/<key>.mp4`
+- **Google Cloud Storage** (public bucket) — `https://storage.googleapis.com/<bucket>/<key>.mp4`
+- **Bunny CDN**, **Backblaze B2** — similar direct URLs
+
+All of these work directly in a `<video>` tag without any code change — just put the URL
+in the CSV `media` column. The extension detection (`video_ext` regex) already handles them.
+
+**Option 3 — Server-side proxy in oTree**
+Add a page/endpoint in oTree that fetches the Drive file server-side and streams it to
+the client. The browser then sees a same-origin response with correct headers.
+Significant complexity: needs an extra oTree `Page` or Django view, service account
+credentials (Google Drive API), and streaming logic. Not practical for a typical
+experiment deployment.
+
+**Option 4 — Accept Drive as iframe, add a CSS workaround for autoplay appearance**
+Keep the current iframe approach but set `autoplay=1` as a URL parameter on the
+`/preview` embed URL: `https://drive.google.com/file/d/{file_id}/preview?autoplay=1`.
+Drive's embedded player does honour `autoplay=1` in some browsers/contexts — it starts
+playback when the iframe loads, which gives a rough approximation of autoplay even though
+the `IntersectionObserver` cannot control it. The video will play immediately when the
+page loads (not scroll-triggered). To combine this with scroll-triggered behaviour,
+swap the iframe `src` on intersection using JS (add/remove `?autoplay=1` param):
+```javascript
+// Approximate scroll-autoplay for Drive iframes (no pause on scroll-out)
+var iframeObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        var iframe = entry.target;
+        var base = iframe.dataset.src; // store original src in data-src
+        if (entry.isIntersecting) {
+            iframe.src = base + '?autoplay=1';
+        } else {
+            iframe.src = base; // reload without autoplay → effectively pauses
+        }
+    });
+}, { threshold: 0.5 });
+document.querySelectorAll('iframe[data-src]').forEach(function(f) {
+    iframeObserver.observe(f);
+});
+```
+Caveats: reloading the iframe `src` causes a full re-fetch of the Drive page on each
+scroll event (flash/flicker), no mute control, and behaviour varies by browser. Acceptable
+only for rough demos, not for a clean research instrument.
+
+### Recommendation
+
+For a behavioral experiment where consistent UX matters, **Option 1 or 2** is the only
+reliable path. Drive was not designed as a video CDN. Use it for CSV/data file hosting
+(which `read_feed` handles well) but host video files on GitHub raw or a proper CDN.

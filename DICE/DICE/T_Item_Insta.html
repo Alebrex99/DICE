@@ -41,14 +41,18 @@
                             controls playsinline preload="metadata">-->
                     <video class="w-100 img-fluid mt-2" style="object-fit: cover;"
                             data-doc-id="{{ i.doc_id }}"
-                            controls muted loop playsinline preload="auto">
+                            controls muted loop playsinline preload="auto"> <!--controls playsinline preload="metadata">-->
                         <source src="{{ i.media }}" type="video/mp4">
+                        Your browser does not support video playback.
                     </video>
                     {{ else }}
                     <a href="{{i.target}}" target="_blank" style="text-decoration: none; cursor: pointer;">
                         <img src="{{i.media}}" class="w-100 img-fluid mt-2" style="object-fit: cover;" alt="{{i.alt_text}}">
                     </a>
                     {{ endif }}
+                    <!-- GOOGLE DRIVE: to add Drive iframe support here, see the
+                         "GOOGLE DRIVE SUPPORT" comment block in insta_video.js and
+                         the matching section in __init__.py, T_Item_Stories.html, stories.js. -->
                 </div>
                 <!-- -------------------------------------------- -->
 
@@ -141,13 +145,16 @@
                        controls playsinline preload="metadata">-->
                 <video class="w-100 img-fluid mt-2" style="object-fit: cover;"
                        data-doc-id="{{ i.doc_id }}"
-                       controls muted loop playsinline preload="auto">
+                       controls muted loop playsinline preload="auto"> <!--controls playsinline preload="metadata">-->
                     <source src="{{ i.media }}" type="video/mp4">
                     Your browser does not support video playback.
                 </video>
                 {{ else }}
                 <img src="{{i.media}}" class="w-100 img-fluid mt-2" style="object-fit: cover;" alt="{{i.alt_text}}">
                 {{ endif }}
+                <!-- GOOGLE DRIVE: to add Drive iframe support here, see the
+                     "GOOGLE DRIVE SUPPORT" comment block in insta_video.js and
+                     the matching section in __init__.py, T_Item_Stories.html, stories.js. -->
                 <!-- -------------------------------------------- -->
 
                 <!-- Post Actions -->
@@ -223,3 +230,4 @@
         </div>
     {{endif}}
 {{endif}}
+
