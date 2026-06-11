@@ -44,8 +44,11 @@
     <div class="stories-caption">
         <p class="stories-caption-text">{{i.text}}</p>
         {{ if i.sponsored }}
-        <!-- CTA Button -->
-            <a href="{{i.target}}" target="_blank" class="d-flex justify-content-between align-items-center px-3 py-2 text-decoration-none border-bottom" style="background-color: #fafafa;">
+        <!-- CTA Button: pointer-events:all overrides the parent caption's pointer-events:none;
+            z-index is inherited from .stories-caption (11) which is above the tap zones (9). -->
+            <a href="{{i.target}}" target="_blank"
+            class="stories-cta d-flex justify-content-between align-items-center px-3 py-2 text-decoration-none border-bottom"
+            style="background-color: #fafafa;">
                 <div>
                     <div class="fw-semibold text-dark" style="font-size: 14px;">{{i.username}}</div>
                     <div class="text-muted" style="font-size: 12px;">{{i.handle}}</div>
@@ -54,7 +57,7 @@
                     Learn more
                 </button>
             </a>
-        {{ endif }}
+        {{ endif }}  
     </div>
 
 

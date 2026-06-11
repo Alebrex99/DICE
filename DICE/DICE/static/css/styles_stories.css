@@ -134,8 +134,21 @@
     left: 0;
     right: 0;
     padding: 0 16px;
-    z-index: 3;
-    pointer-events: none;
+    z-index: 11;  /*change from z-index: 9; above tap zones (z-index 9) so CTA link is reachable */
+    /*N.B.: ora la caption (con il testo + CTA) sta sopra le zone di TAP, è però interagibile solo se pointer-events:all, quindi
+    se non ci sono contenuti sponsored -> fall back allo z-index 9 */
+    pointer-events: none; /* text is not interactive; CTA overrides with pointer-events:all */
+}
+
+/* ===== SPONSORED CTA LINK (inside .stories-caption) ===== */
+/* pointer-events:all re-enables clicks — parent .stories-caption has pointer-events:none.
+   Add any visual customisation here (margin, border-radius, shadow, etc.). */
+.stories-cta {
+    pointer-events: all; /* MUST keep — makes the link clickable */
+    display: block;
+    margin-top: 10px; /* space between text and CTA bar */
+    border-radius: 8px; /* rounded corners */
+    overflow: hidden;
 }
 
 .stories-caption-text {

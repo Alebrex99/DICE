@@ -138,6 +138,42 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ---------------------- CTA link in sponsored stories --------------------------------
+    // Pause video + freeze timer when the user opens the ad link (new tab).
+    // Mirrors the reply-input focus/blur pattern.
+    // ricorda: presi tutti i nodi <a> con classe .stories-cta, ovvero uno per ogni storia sponsorizzata che ha un link cliccabile (CTA)
+    document.querySelectorAll('.stories-cta').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (currentIndex < 0 || currentIndex >= storyItems.length) return;
+            var video = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+            if (video) video.pause();
+            cancelAnimationFrame(animFrame);
+        });
+    });
+
+    // Pause video when leaving the tab; resume video + timer when returning.
+    // The browser suspends requestAnimationFrame automatically on hidden tabs
+    // (progress bar freezes without any code), but <video> keeps playing unless
+    // we explicitly call pause().
+    document.addEventListener('visibilitychange', function () {
+        if (currentIndex < 0 || currentIndex >= storyItems.length) return;
+        var video = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+
+        if (document.visibilityState === 'hidden') {
+            if (video) video.pause();
+            cancelAnimationFrame(animFrame);
+        } else {
+            if (video) video.play().catch(function () {});
+            var fill       = segmentFills[currentIndex]; // prende il riempimento della batta della storia corrente
+            var currentPct = parseFloat(fill ? fill.style.width : 0) || 0; // converte in numero la percentuale di completamento attuale (es. "75%") o 0 se non c'è
+            var remaining  = storyDuration * (1 - currentPct / 100); //calcola il rimanente della barra, es. se siamo al 75% e la durata è 7000ms, rimangono 1750ms
+            startProgressAnimationFrom(currentIndex, currentPct, remaining);
+        }
+    });
+    // ---------------------------------------------------------------------------------------
+
+
     // Catch page unload as safety net
     window.addEventListener('beforeunload', function () {
         saveCurrentReply();
