@@ -111,13 +111,26 @@ document.addEventListener('DOMContentLoaded', function () {
         // Pause progress while typing; resume on blur
         replyInput.addEventListener('focus', function () {
             cancelAnimationFrame(animFrame);
+            // VIDEO MODE
+            if (currentIndex >= 0 && currentIndex < storyItems.length) {           // ⬅️ nuovo
+                var video = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+                if (video) video.pause();                                          // ⬅️ ferma anche il video
+            }
         });
+
         replyInput.addEventListener('blur', function () {
             saveCurrentReply();
+            // Se il blur è causato dal cambio scheda, NON riprendere ora: lo farà
+            // visibilitychange al ritorno. Riprendi solo se la scheda è visibile.
+            if (document.visibilityState !== 'visible') return;
             if (currentIndex >= 0 && currentIndex < storyItems.length) {
+                var video = storyItems[currentIndex].el.querySelector('video.stories-bg-video');
+                if (video) video.play().catch(function () {});  
                 var fill       = segmentFills[currentIndex];
                 var currentPct = parseFloat(fill ? fill.style.width : 0) || 0;
-                var remaining  = storyDuration * (1 - currentPct / 100);
+                // VIDEO MODE
+                //var remaining  = storyDuration * (1 - currentPct / 100);
+                var remaining  = slideDurationMs(currentIndex) * (1 - currentPct / 100);
                 startProgressAnimationFrom(currentIndex, currentPct, remaining);
             }
         });
@@ -164,10 +177,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (video) video.pause();
             cancelAnimationFrame(animFrame);
         } else {
+            // Se l'utente sta scrivendo nella reply, resta in pausa: ci pensa il blur a riprendere.
+            var replyInput = document.getElementById('storiesReplyInput');
+            if (replyInput && document.activeElement === replyInput) return;
             if (video) video.play().catch(function () {});
-            var fill       = segmentFills[currentIndex]; // prende il riempimento della batta della storia corrente
-            var currentPct = parseFloat(fill ? fill.style.width : 0) || 0; // converte in numero la percentuale di completamento attuale (es. "75%") o 0 se non c'è
-            var remaining  = storyDuration * (1 - currentPct / 100); //calcola il rimanente della barra, es. se siamo al 75% e la durata è 7000ms, rimangono 1750ms
+            var fill       = segmentFills[currentIndex];
+            var currentPct = parseFloat(fill ? fill.style.width : 0) || 0;
+            var remaining  = slideDurationMs(currentIndex) * (1 - currentPct / 100);
             startProgressAnimationFrom(currentIndex, currentPct, remaining);
         }
     });
@@ -344,8 +360,31 @@ function goToPrev() {
 
 // ===== PROGRESS ANIMATION =====
 
+// VIDEO MODE 
+// ms the current slide should last: the video's own length, else story_duration
+function slideDurationMs(index) {
+    var v = storyItems[index] && storyItems[index].el.querySelector('video.stories-bg-video');
+    if (v && isFinite(v.duration) && v.duration > 0) return v.duration * 1000;
+    return storyDuration;
+}
+
 function startProgressAnimation(index) {
-    startProgressAnimationFrom(index, 0, storyDuration);
+    //OLD
+    // startProgressAnimationFrom(index, 0, storyDuration);
+    // ---------------------------VIDEO MODE -------------------------
+    // invece di passare sempre storyDuration, valutiamo l'animazione in base alla duration o di video oppure di story Duration
+    var v = storyItems[index] && storyItems[index].el.querySelector('video.stories-bg-video'); // prendi il video, in js && indica: "se storyItems[index] è definito e truthy, allora prendi storyItems[index].el.querySelector(...), altrimenti restituisci undefined"
+    if (v && !(isFinite(v.duration) && v.duration > 0)) { // video c'è && o la sua durata non è valida o è 0
+        console.log('Video duration not ready, waiting for metadata...', v);
+        v.addEventListener('loadedmetadata', function once() { //verifico se la slide ha un video con metadati non ancora caricati, appena caricati -> ricalcola la durata e avvia l'animazione
+            v.removeEventListener('loadedmetadata', once);
+            if (index === currentIndex) startProgressAnimationFrom(index, 0, slideDurationMs(index));
+        });
+        return;
+    }
+    // se non c'è video o la durata è già valida, avvia subito l'animazione
+    startProgressAnimationFrom(index, 0, slideDurationMs(index)); //slideDurationMs in questo caso restituisce la classica storyDuration
+    // ----------------------------------------------------------------
 }
 
 function startProgressAnimationFrom(index, startPct, duration) {

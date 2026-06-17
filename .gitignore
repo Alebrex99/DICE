@@ -19,3 +19,16 @@ bin-release/
 
 # no .venv
 .venv/
+
+# no env
+.env/
+/DICE/.env
+
+DICE/DICE/__pycache__/
+DICE/__pycache__/
+__pycache__/
+*.pyc
+db.sqlite3
+
+# claude
+
