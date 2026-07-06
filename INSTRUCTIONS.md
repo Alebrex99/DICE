@@ -7,10 +7,10 @@
 The feed is driven by a CSV file. The active path is set in:
 
 ```
-DICE/DICE/settings.py  →  data_path = "DICE/static/data/sample_feed.csv"
+DICE/DICE/settings.py  →  data_path = "https://raw.githubusercontent.com/<user>/<repo>/main/DICE/DICE/static/data/sample_feed.csv"
 ```
 
-You can also point `data_path` to a GitHub raw URL or a Google Sheets export URL. Delimiter is `;` by default.
+`data_path` accepts a **GitHub raw URL** (recommended — lets you change the feed without redeploying), a Google Sheets export URL, or a **local path** relative to the app folder (e.g. `"DICE/static/data/sample_feed.csv"`). Delimiter is `;` by default.
 
 > **After every CSV or `settings.py` change: run `otree resetdb`, create a new session, and hard-refresh the browser (Ctrl+Shift+R).**
 
@@ -59,10 +59,12 @@ On slide activation (`activateSlide()`), `stories.js` calls `playCurrentSlideVid
 
 **Audio:** all videos start muted. The speaker button (top-right) toggles audio for all `<video>` elements at once.
 
-**Story duration:** controlled by `story_duration` in `settings.py` (seconds). The timer always uses this value regardless of video length — shorter videos loop, longer videos are cut off.
+**Slide duration / progress bar** (`slideDurationMs()` in `stories.js`):
+- **Video slides** last the **video's own length** — the progress bar is timed to the video duration, so the slide auto-advances after one full play-through. (`story_duration` is ignored for video slides.)
+- **Image slides** last `story_duration` seconds, set in `settings.py`.
 
 ```python
-# SESSION_CONFIG_DEFAULTS
+# SESSION_CONFIG_DEFAULTS  →  applies to image slides; video slides use their own length
 story_duration = 7
 
 # per-session override
@@ -84,7 +86,34 @@ The template renders:
 
 ---
 
-## 6. Key file map
+## 6. Configuring a session on the live server
+
+The values in `settings.py` (`survey_link`, `data_path`, `story_duration`, `dwell_threshold`, `skip_intro`, …) are **defaults baked into the deployed app** — but most of them can be **overridden per session from the admin, without redeploying**.
+
+**Three layers of configuration:**
+
+| Layer | Where | Editable after deploy? |
+|---|---|---|
+| Default config value | `settings.py` (packaged into the `.otreezip`) | Only by re-`otree zip` + redeploy |
+| Per-session override | Admin → **Sessions** → *Create new session* form | ✅ Yes — applies to that session only |
+| Deploy env vars (`OTREE_ADMIN_PASSWORD`, `OTREE_PRODUCTION`, `OTREE_AUTH_LEVEL`) | Heroku **Config Vars** | ✅ Yes — no redeploy |
+
+**How to override a parameter for a run:**
+1. Log into `/admin` on the deployed site.
+2. Go to the **Sessions** tab (or a **Room**) → **Create new session**.
+3. oTree renders an editable field for every session-config key whose value is a **string, number, or boolean** — e.g. `survey_link`, `data_path`, `story_duration`. Type your value there.
+4. Create the session; the override applies to **that session only**.
+
+**Caveats:**
+- Editable fields appear only under **Sessions** / **Rooms** — **not** the **Demo** section. Demo always uses the hard-coded `settings.py` defaults, so launch real studies from **Sessions**.
+- Overrides are **per-session, not persistent** — the next session starts again from the `settings.py` default. To change the default for *every* session permanently, edit `settings.py` and redeploy.
+- Only string/number/boolean parameters are editable this way. List/dict parameters must be changed in `settings.py`.
+
+So you can, for example, point a single session at a different feed CSV or a different survey link on the fly, without repackaging the app.
+
+---
+
+## 7. Key file map
 
 | What | File |
 |---|---|
