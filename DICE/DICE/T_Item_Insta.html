@@ -209,6 +209,57 @@
                     <div class="modal-body">
                         <div class="replying-tweet mb-4 ps-3 border-start border-3 text-secondary" style="border-color: #e1306c !important;"
                              id="replying_tweet_{{i.doc_id}}"></div>
+
+                        <!---------- Existing comments (static, from CSV) ----------------->
+                        {{ if i.comments }}
+                        <div class="insta-comments mb-3">
+                            {{ for c in i.comments }}
+                            <div class="insta-comment d-flex align-items-start mb-2 {{ if c.member }}insta-comment-member{{ endif }}">
+                                <!-- Avatar (photo or fallback icon) -->
+                                {{ if c.image_available }}
+                                <img src="{{ c.image }}" class="rounded-circle insta-comment-avatar me-2" alt="Profile picture of {{ c.user }}.">
+                                {{ else }}
+                                <i class="bi bi-person-circle text-secondary insta-comment-avatar-icon me-2"></i>
+                                {{ endif }}
+
+                                <div class="flex-grow-1" style="font-size: 13px; line-height: 1.3;">
+                                    <!-- Pinned / Member top line (above username) -->
+                                    {{ if c.pinned }}
+                                    <div class="insta-comment-pinned text-muted">
+                                        <i class="bi bi-pin-angle-fill"></i> Pinned by Author{{ if c.member }} <span class="insta-comment-member-label">· Comment by Member</span>{{ endif }}
+                                    </div>
+                                    {{ elif c.member }}
+                                    <div class="insta-comment-member-label">Comment by Member</div>
+                                    {{ endif }}
+
+                                    <!-- Username + inline meta (collapses left; each shows only if set) -->
+                                    <div class="d-flex align-items-center flex-wrap gap-1">
+                                        <span class="fw-semibold">{{ c.user }}</span>
+                                        {{ if c.verified }}<i class="bi bi-patch-check-fill insta-comment-verified"></i>{{ endif }}
+                                        {{ if c.time }}<span class="text-muted" style="font-size: 11px;">{{ c.time }}</span>{{ endif }}
+                                        {{ if c.liked_by_author }}<span class="text-muted" style="font-size: 11px;">· Liked by Author</span>{{ endif }}
+                                        {{ if c.is_author }}<span class="text-muted" style="font-size: 11px;">· Author</span>{{ endif }}
+                                    </div>
+
+                                    <!-- Comment text -->
+                                    <span>{{ c.text }}</span>
+                                </div>
+
+                                <!-- Like button: red ONLY if author liked it (static); click = count only -->
+                                <div class="comment-like-button ms-2 text-center" data-liked="false">
+                                    {{ if c.liked_by_author }}
+                                    <span class="bi bi-heart-fill text-danger comment-like-icon d-block"></span>
+                                    {{ else }}
+                                    <span class="bi bi-heart comment-like-icon d-block"></span>
+                                    {{ endif }}
+                                    <span class="comment-like-count" style="font-size: 11px;">{{ c.like_count }}</span>
+                                </div>
+                            </div>
+                            {{ endfor }}
+                        </div>
+                        {{ endif }}
+                        <!--------------------------------------------------------------------------------------->
+
                         <div class="d-flex align-items-start text-secondary">
                             <div class="me-2">
                                 <i class="bi bi-person-circle" style="font-size: 32px;" data-bs-toggle="popover"

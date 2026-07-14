@@ -172,6 +172,24 @@ def read_feed(path, delim):
 def is_url(s):
     return bool(re.match(r'^https?:\/\/', str(s)))
 
+def to_bool(v):
+    """CSV truthiness: 1 / true / vero / yes / x -> True, anything else (incl. empty/false/falso) -> False."""
+    return str(v).strip().lower() in ('1', 'true', 'vero', 'yes', 'x')
+
+# COMMENTS
+def highlight_entities(text):
+    """Wrap #hashtags, $cashtags, @mentions and links in the same styling used for captions."""
+    text = str(text)
+    text = re.sub(r'\B(#[a-zA-Z0-9_]+\b)', r'<span class="text-primary">\g<0></span>', text)
+    text = re.sub(r'\B(\$[a-zA-Z0-9_\.]+\b)', r'<span class="text-primary">\g<0></span>', text)
+    text = re.sub(r'\B(@[a-zA-Z0-9_]+\b)', r'<span class="text-primary">\g<0></span>', text)
+    text = re.sub(
+        r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])',
+        r'<a class="text-primary">\g<0></a>', text)
+    return text
+
+
+
 # some pre-processing
 def preprocessing(df, config):
     # reformat date — try European dot-style first to avoid day/month ambiguity, then fall back to pandas' flexible parser
@@ -273,6 +291,62 @@ def preprocessing(df, config):
             config['condition_col'] in df.columns):
         # Rename the specified column to 'condition'
         df.rename(columns={config['condition_col']: 'condition'}, inplace=True)
+
+    # COMMENTS ------------------------------------------------------------------
+    # Auto-detect how many comment slots the CSV provides (columns comment_0, comment_1, ...).
+    comment_slot_ids = sorted(
+        int(re.fullmatch(r'comment_(\d+)', col).group(1)) #group(1) = (\d+) = il numero del commento
+        for col in df.columns
+        if re.fullmatch(r'comment_(\d+)', col)
+    )
+
+    def build_comments(row):
+        post_owner = str(row.get('username', '')).strip().lower()
+
+        def cell(col):
+            v = row.get(col, '') # can return NaN if the column is missing, e.g., comment_3 when there are only 3 slots
+            return '' if pd.isna(v) else str(v).strip()
+
+        comments = []
+        for j in comment_slot_ids:
+            text  = cell(f'comment_{j}')
+            user  = cell(f'comment_user_{j}')
+            image = cell(f'comment_image_{j}')
+
+            # Skip a slot only if the 3 core fields are all empty (unused slot)
+            if not text and not user and not image:
+                continue
+
+            comments.append({
+                'idx': j,                                              # needed for future subcomment refs
+                'text': highlight_entities(text) if text else '',     # empty -> ""
+                'user': user if user else 'unknown',                  # empty -> "unknown"
+                'image': image,                                       # empty -> template icon fallback
+                'image_available': is_url(image),
+                'like_count': int(np.random.randint(0, 201)),         # random 0-200
+                'verified': to_bool(cell(f'verified_user_comment_{j}')),
+                'time': cell(f'comment_time_{j}'),                    # empty -> "" (no timestamp)
+                'liked_by_author': to_bool(cell(f'comment_liked_author_{j}')),  # red heart + "· Liked by Author"
+                'is_author': bool(user) and user.lower() == post_owner,           # "· Author"
+                'member': to_bool(cell(f'member_comment_{j}')),
+                'pinned': to_bool(cell(f'pinned_comment_{j}')),
+                'subcomments': [],                                    # reserved (future "View previous replies")
+            })
+
+        # Pinned first; stable sort keeps original order within each group
+        comments.sort(key=lambda c: not c['pinned']) # ascending order (default): chi false comapre prima
+        return comments
+    # tu hai ogni riga = N commenti del post i-esimo
+    # ogni riga (il post) ha N commenti del post (una lista), ogni commento è un dizionario: LISTA di DIZIONAI: ogni commento è testo, user, image, like_count.
+    # Quindi df['comments'] diventa una colonna nel DF, dove ogni riga è i commenti relativi ad un POST, ovvero una LIST di dizionari.
+    # List-comprehension (NOT df.apply) avoids pandas expanding equal-length lists into columns
+    df['comments'] = [build_comments(row) for _, row in df.iterrows()] 
+    #shape column comments: se assegni una lista alla colonna pandas, in automatico, ogni elemento della lista si inserisce nella riga corrispondente.
+    # quindi ogni riga della colonna comments è una LISTA di DIZIONARI (ogni dizionario = un commento), oppure è una LISTA di LISTE di DIZIONARI (ogni lista = i commenti del post i-esimo)
+    # riga 1: [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
+    # riga 2: [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
+    # ---------------------------------------------------------------------------
+
 
     return df
 

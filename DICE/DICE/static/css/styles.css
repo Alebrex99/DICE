@@ -126,3 +126,30 @@ full-height {
 .carousel-control-prev-icon{
     filter: invert(100%);
 }
+
+/* Instagram comments */
+.insta-comment-avatar {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+}
+.insta-comment-avatar-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+.comment-like-button {
+    cursor: pointer;
+}
+.comment-like-icon {
+    font-size: 16px;
+}
+.comment-like-icon.bi-heart-fill.text-danger {
+    color: #ed4956 !important;   /* Instagram red */
+}
+
+/* Instagram comment badges */
+.insta-comment-verified { color: #3897f0; font-size: 12px; }   /* IG verified blue */
+.insta-comment-pinned { font-size: 11px; }
+.insta-comment-member { background-color: #f4ecfb; border-radius: 8px; padding: 6px; }  /* violet member card */
+.insta-comment-member-label { color: #8e44ad; font-weight: 600; font-size: 11px; }
+
