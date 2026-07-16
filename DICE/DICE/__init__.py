@@ -300,14 +300,16 @@ def preprocessing(df, config):
         if re.fullmatch(r'comment_(\d+)', col)
     )
 
-    def build_comments(row):
+    def build_comments(row): # ROW = il post i-esimo con i suoi commenti
         post_owner = str(row.get('username', '')).strip().lower()
 
         def cell(col):
             v = row.get(col, '') # can return NaN if the column is missing, e.g., comment_3 when there are only 3 slots
             return '' if pd.isna(v) else str(v).strip()
 
-        comments = []
+        # 1) Build every non-empty comment slot, keyed by its slot index j
+        all_comments = {} # es. {0: {'idx': 0, 'text': '...', 'user': '...', 'image': '...', 'like_count': 123, ...}, 1: {...}, ...}
+        raw_subrefs = {} # es. {0: '1,2', 1: '', 2: '3', ...} = comment_0 has subcomments comment_1 and comment_2; comment_1 has no subcomments; comment_2 has subcomment comment_3
         for j in comment_slot_ids:
             text  = cell(f'comment_{j}')
             user  = cell(f'comment_user_{j}')
@@ -317,8 +319,8 @@ def preprocessing(df, config):
             if not text and not user and not image:
                 continue
 
-            comments.append({
-                'idx': j,                                              # needed for future subcomment refs
+            all_comments[j] = {
+                'idx': j,
                 'text': highlight_entities(text) if text else '',     # empty -> ""
                 'user': user if user else 'unknown',                  # empty -> "unknown"
                 'image': image,                                       # empty -> template icon fallback
@@ -330,11 +332,64 @@ def preprocessing(df, config):
                 'is_author': bool(user) and user.lower() == post_owner,           # "· Author"
                 'member': to_bool(cell(f'member_comment_{j}')),
                 'pinned': to_bool(cell(f'pinned_comment_{j}')),
-                'subcomments': [],                                    # reserved (future "View previous replies")
-            })
+                'subcomments': [],
+                'sub_count': 0,
+            }
+            raw_subrefs[j] = cell(f'subcomments_comment_{j}')
 
-        # Pinned first; stable sort keeps original order within each group
-        comments.sort(key=lambda c: not c['pinned']) # ascending order (default): chi false comapre prima
+        # 2) Parse a subcomments cell -> referenced slot indices (accepts , or & delimiter)
+        def parse_refs(s):
+            refs = []
+            for token in re.split(r'[,&]', s):
+                m = re.search(r'\d+', token)
+                if m:
+                    refs.append(int(m.group()))
+            return refs
+
+        # 3) One pass in slot order, driven by a single rule: a comment that has ALREADY been claimed
+        #    as a reply has its OWN list ignored. That one rule gives both:
+        #      * the 1-level cap  -> a reply's list is dead, so replies never nest;
+        #      * cycle safety     -> with comment_0 -> comment_1 and comment_1 -> comment_0, comment_1 is
+        #                            already a reply when we reach it, so its list cannot steal comment_0,
+        #                            which stays the parent.
+        #    A comment named only by an ignored list is never claimed, so it simply renders as a normal
+        #    top-level comment (nothing is lost, it just loses the link to its would-be parent).
+        replies = set()
+        for j in comment_slot_ids:
+            if j not in all_comments or j in replies: 
+                # se un commento non esiste o è già stato reclamato come reply, non guardare proprio la sua lista di subcomments
+                continue
+            for ref in parse_refs(raw_subrefs.get(j, '')): #raw_subrefs = { 0: "1,2",  1: "",  2: "0" }
+                if ref in all_comments and ref != j:      # must exist; no self-reference, cioè se ho errore di mettere un subcomment uguale al suo padre
+                    replies.add(ref)
+                    all_comments[j]['subcomments'].append(all_comments[ref])
+
+        # 4) SAFETY NET for a malformed CSV: a "backward" reference, i.e. a comment citing an EARLIER
+        #    slot that was already processed as a parent. Example: comment_0 -> comment_1 AND
+        #    comment_2 -> comment_0. At j=0 comment_0 had not been claimed yet (comment_2 is read later),
+        #    so it was treated as a parent and took comment_1; at j=2 it becomes a reply while still
+        #    holding comment_1 -> that would render replies INSIDE a reply = 2 levels.
+        #    Emptying every reply's own list makes the 1-level cap a GUARANTEE instead of a hope.
+        #
+        #    HOW TO AVOID THE SITUATION ENTIRELY (CSV convention):
+        #      put all subcomments at the END of the row, with the HIGHEST indices, so a parent always
+        #      cites a HIGHER index than its own  ->  comment_0 -> comment_5,comment_6
+        #    With that convention every reference points forward and this loop is a pure NO-OP (a claimed
+        #    comment already skipped its list, so its 'subcomments' is empty already).
+        #
+        #    Known cost, ONLY in the malformed case: the reply the demoted parent had claimed
+        #    (comment_1 above) is left orphaned and is not rendered anywhere.
+        #    A stronger variant that restores it is documented in FUTURE_UPDATES.md -> UPDATE G.
+        for j in replies:
+            all_comments[j]['subcomments'] = []
+
+        for c in all_comments.values():
+            c['sub_count'] = len(c['subcomments'])
+
+        # 5) Top-level list = comments never claimed as a reply, in slot order; pinned first (stable)
+        comments = [all_comments[j] for j in comment_slot_ids
+                    if j in all_comments and j not in replies]
+        comments.sort(key=lambda c: not c['pinned'])
         return comments
     # tu hai ogni riga = N commenti del post i-esimo
     # ogni riga (il post) ha N commenti del post (una lista), ogni commento è un dizionario: LISTA di DIZIONAI: ogni commento è testo, user, image, like_count.
@@ -342,11 +397,9 @@ def preprocessing(df, config):
     # List-comprehension (NOT df.apply) avoids pandas expanding equal-length lists into columns
     df['comments'] = [build_comments(row) for _, row in df.iterrows()] 
     #shape column comments: se assegni una lista alla colonna pandas, in automatico, ogni elemento della lista si inserisce nella riga corrispondente.
-    # quindi ogni riga della colonna comments è una LISTA di DIZIONARI (ogni dizionario = un commento), oppure è una LISTA di LISTE di DIZIONARI (ogni lista = i commenti del post i-esimo)
-    # riga 1: [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
-    # riga 2: [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
+    # riga 1 (post 1): [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
+    # riga 2 (post 2): [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
     # ---------------------------------------------------------------------------
-
 
     return df
 

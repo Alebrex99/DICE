@@ -1,6 +1,6 @@
 # FUTURE_UPDATES.md
 
-Pending improvements for the video feature in the full DICE app.
+Pending improvements for the video and Instagram-comment features in the full DICE app.
 Reference state: see **Current state** below. Video source is **GitHub raw URLs** (final decision).
 
 ---
@@ -35,12 +35,33 @@ df['image_available'] = df['pic_available'] & ~df['is_video']
   `story_duration` for images.
 - Sponsored stories have a clickable CTA (`.stories-cta`).
 
+**Instagram comments — `T_Item_Insta.html` + `T_Insta_Comment.html` + `insta_comments.js`**
+- Static comments per post come from the CSV (`comment_i`, `comment_user_i`, `comment_image_i`, plus
+  `verified_user_comment_i`, `comment_time_i`, `comment_liked_author_i`, `pinned_comment_i`,
+  `member_comment_i`, `subcomments_comment_i`). The slot count is **auto-detected** from the
+  `comment_<n>` columns, so adding a slot needs no code change. Booleans accept `1/true/vero/yes/x`.
+- Rendered inside the Replies modal, between the post text and the "Add a comment…" input.
+  Pinned comments sort first.
+- **Threaded replies (1 level):** `subcomments_comment_i` lists a comment's replies (delimiter `,`,
+  `&` also accepted). Slots resolve in ascending CSV order with **one rule**: a comment already claimed
+  as a reply has its **own list ignored**. That single rule gives the 1-level cap *and* makes cycles safe
+  (`0→1`, `1→0` leaves comment_0 the parent). A comment named only by an ignored list is never claimed
+  and renders as a normal top-level comment. A 2-line safety net empties every reply's own list so
+  2 levels can never render — a no-op with well-formed data (see **UPDATE G**).
+  **CSV convention:** put subcomments at the end of the row with the highest indices (forward refs only).
+  "View replies (N)" expands them indented and toggles to "Hide replies".
+- One reusable card partial (`T_Insta_Comment.html`) included recursively via
+  `{{ include "DICE/T_Insta_Comment.html" with c=sc }}` — identical markup at both levels.
+- Heart is red only when `comment_liked_author_i` is set; clicking moves the count only (nothing saved).
+
 ### Not yet implemented (sections below)
 - **A** — Video height cap (CSS)
 - **B** — Per-video watch-time tracking (`watch_time_data`)  ← main data-collection gap
 - **C** — Pause-aware dwell time (exclude hidden-tab time)
 - **D** — Move video hosting off the repo (production reliability)
 - **E** — Purge the committed videos from git history (depends on D)
+- **F** — Comment/reply interaction logging (comment feature is display-only)
+- **G** — Stronger cleanup for malformed comment references (nothing gets orphaned)
 
 ### Google Drive: abandoned
 Drive was tried and dropped. The `uc?id=` endpoint does not serve the headers a native `<video>`
@@ -239,3 +260,72 @@ git push --force        # coordinate: every collaborator must re-clone afterward
 ```
 Then add `DICE/DICE/static/videos/` (or `*.mp4`) to `.gitignore` if the files are no longer needed
 in the tree.
+
+---
+
+## UPDATE F — Comment / reply interaction logging
+
+### Why
+The Instagram comment section (static comments + threaded replies from the CSV) is fully rendered,
+but every interaction is **frontend-only** — nothing is recorded:
+- comment/reply heart clicks (`insta_comments.js`, `.comment-like-button`) move the visible count only;
+- "View replies (N)" expand/collapse clicks (`.view-replies-btn`) are not tracked;
+- there is no per-comment "seen" measurement.
+
+If comment engagement is a study variable, add a collection layer (same 3-part pattern as likes/replies).
+
+### Files to change (3 coordinated edits — missing any one silently drops the data)
+1. `T_Feed_Insta.html` — hidden input, e.g. `<input type="hidden" name="comment_likes_data" id="comment_likes_data">`.
+2. `insta_comments.js` — give each `.comment-like-button` a `data-doc-id` + comment `idx`, and collect
+   `{doc_id, comment_idx, liked}` (optionally reply-expand events) into the hidden input on form submit.
+3. `__init__.py` — `comment_likes_data = models.LongStringField(blank=True)` on `Player`, add it to
+   `C_Feed.get_form_fields()`, and optionally to `custom_export()`.
+
+### Note
+The per-comment `like_count` seeds are randomized (0–200) per session, so they are display-only and not
+comparable across participants; only the participant's click deltas would be meaningful if collected.
+
+---
+
+## UPDATE G — Stronger cleanup for malformed comment references
+
+### Why
+`build_comments()` resolves threaded replies in one sequential pass, then runs a 2-line safety net that
+empties every reply's own `subcomments` list. That makes the 1-level cap a **guarantee** (2 levels can
+never render), but in one malformed case it silently drops a comment.
+
+**The case — a "backward" reference:** `comment_0 → comment_1` **and** `comment_2 → comment_0`.
+At `j=0` comment_0 has not been claimed yet (comment_2 is read later), so it is treated as a parent and
+claims comment_1. At `j=2`, comment_2 claims comment_0. Now comment_0 is a reply that still carries
+comment_1 → 2 levels. The safety net empties comment_0's list, so the render is correct
+(comment_2 → comment_0, flat), but **comment_1 stays marked as a reply while no parent holds it any more
+→ it is not rendered anywhere.**
+
+This cannot happen when subcomments are placed at the END of the row with the HIGHEST indices (the
+documented CSV convention), because then every reference points forward. UPDATE G is only worth applying
+if hand-entered data cannot be trusted to follow that convention.
+
+### The fix — replace the 2-line net with these ~5 lines
+Derive `replies` from what is **actually rendered**, instead of trusting the earlier marking:
+```python
+        # 1) a reply cannot carry replies of its own
+        for j in replies:
+            all_comments[j]['subcomments'] = []
+
+        # 2) a comment is a reply only if a surviving top-level parent still holds it
+        held = set()
+        for j in comment_slot_ids:
+            if j in all_comments and j not in replies:
+                held.update(sc['idx'] for sc in all_comments[j]['subcomments'])
+        replies = held
+```
+
+### Result
+On the malformed case: comment_2 → comment_0 (flat, 1 level) **and comment_1 is restored as a normal
+top-level comment** instead of disappearing. On well-formed data both versions are identical no-ops.
+
+### Known limit
+With *chained* backward references (`comment_0 → comment_1`, `comment_2 → comment_0`,
+`comment_3 → comment_2`) some parent→reply links are still dropped — all comments stay visible, they just
+lose their nesting. Fully resolving an arbitrary reference graph would require a fixpoint computation
+(which can oscillate on cycles) and is not worth the complexity for hand-entered stimuli.

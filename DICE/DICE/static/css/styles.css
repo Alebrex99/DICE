@@ -153,3 +153,10 @@ full-height {
 .insta-comment-member { background-color: #f4ecfb; border-radius: 8px; padding: 6px; }  /* violet member card */
 .insta-comment-member-label { color: #8e44ad; font-weight: 600; font-size: 11px; }
 
+/* Threaded replies */
+.view-replies-btn {
+    margin-left: 40px;          /* aligns under the parent username: avatar 32px + me-2 8px */
+    background: none; border: none; padding: 0 0 8px 0;
+    color: #737373; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.insta-subcomments { margin-left: 40px; }   /* indent replies to the right */

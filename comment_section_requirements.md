@@ -49,25 +49,36 @@ These require adding new columns/flags to the input CSV. For each comment, let *
 
 ---
 
-## 3. Future Feature (design for it now, but do not implement yet)
+## 3. Threaded replies — "View replies (N)" (IMPLEMENTED)
 
-**"View previous replies" button** — collects subcomments (threaded replies) under a specific comment.
+Each top-level comment that has replies shows a **"View replies (N)"** button below the comment,
+left-aligned under the username. Clicking it expands the replies (indented to the right) and the
+button toggles to **"Hide replies"**; clicking again collapses them.
 
-- Each top-level comment gets a "View previous replies" button, positioned below the comment text, left-aligned in line with the comment's username.
-- Clicking it expands a subcomments section showing all replies to that comment, indented slightly to the right.
-- **Hierarchy is limited to 1 level**: a subcomment cannot itself have subcomments, and a comment that appears as a subcomment of another comment cannot simultaneously exist as a top-level comment.
+- CSV column `subcomments_comment_i` — a list of comment references (e.g. `comment_1,comment_2`)
+  naming the replies under comment *i*. **Delimiter: `,`** (the parser also accepts `&`).
+- **One rule, applied in CSV order:** slots are read in ascending order (`comment_0`, `comment_1`, …).
+  A comment that has **already been claimed** as a reply has its **own list ignored**; any other comment
+  is top-level, and its list claims its replies. So each comment is exactly one of: a plain comment, a
+  parent (has replies), or a reply. A reply may be listed by several parents and then appears under each.
+- **That single rule gives both guarantees:** the **1-level cap** (a reply's list is dead, so replies
+  never nest) **and cycle safety** — with `comment_0 → comment_1` and `comment_1 → comment_0`, comment_1
+  is already a reply when we reach it, so its list is ignored and comment_0 stays the parent.
+- **An ignored list has no effect at all.** With `comment_0 → comment_3` and `comment_3 → comment_4`,
+  comment_3 is a reply of comment_0 and comment_4 is simply **never claimed** — so it renders as a
+  **normal top-level comment**. Nothing is lost; it only loses the link to comment_3.
+- ✅ **Good practice: put all subcomments at the END of the row, with the HIGHEST indices**, so a parent
+  always cites a *higher* index than its own (`comment_0 → comment_5,comment_6`). With this convention
+  every reference points forward and the model resolves correctly in a single pass.
+- ⚠️ **Backward references are malformed data.** If a comment cites an *earlier* slot already processed
+  as a parent (`comment_0 → comment_1` **and** `comment_2 → comment_0`), comment_0 would become a reply
+  that still carries a reply = 2 levels. A safety net in `build_comments` empties every reply's own list,
+  so **2 levels can never render**; the cost in that malformed case is that comment_1 is orphaned and not
+  shown. See `FUTURE_UPDATES.md` → **UPDATE G** for the stronger variant that restores it.
+- A `pinned` flag on a reply has no effect (replies never enter the top-level ordering).
 
-Example:
-```
-Comment_0
-  ○ subcomment: comment_1
-  ○ subcomment: comment_2
-```
-
-- CSV column: `subcomments_comment_i` — a delimited list of column references pointing to the subcomments (e.g., `comment_1,comment_2`). Suggest evaluating whether `,` or `&` is the more robust delimiter given other data in the CSV.
-- Any comment referenced inside a `subcomments_comment_i` list must not have its own `subcomments_comment_i` — it is only ever a subcomment.
-
-I don't need the implementation steps for this yet — just make sure the CSV schema and comment data model accommodate it. I'll ask for the implementation plan separately later.
+Example: on a post row, `subcomments_comment_0 = comment_5,comment_6` renders comment_0 at top level
+with a "View replies (2)" button; comment_5 and comment_6 appear **only** indented under it.
 
 ---
 

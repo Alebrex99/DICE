@@ -17,4 +17,21 @@ document.addEventListener('DOMContentLoaded', function () {
             // Does NOT change heart colour — red is reserved for author-liked comments (render-time).
         });
     });
+
+    // "View replies (N)" — expand/collapse threaded replies
+    document.querySelectorAll('.view-replies-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = document.getElementById(btn.getAttribute('data-target'));
+            if (!target) return;
+            var isHidden = target.style.display === 'none';
+            target.style.display = isHidden ? 'block' : 'none';
+            var label = btn.querySelector('.view-replies-label');
+            if (label) {
+                label.textContent = isHidden
+                    ? 'Hide replies'
+                    : 'View replies (' + btn.getAttribute('data-count') + ')';
+            }
+        });
+    });
+
 });
