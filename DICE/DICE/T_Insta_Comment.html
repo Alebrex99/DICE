@@ -2,7 +2,7 @@
     <div class="insta-comment d-flex align-items-start mb-2 {{ if c.member }}insta-comment-member{{ endif }}">
         <!-- Avatar (photo or fallback icon) -->
         {{ if c.image_available }}
-        <img src="{{ c.image }}" class="rounded-circle insta-comment-avatar me-2" alt="Profile picture of {{ c.user }}.">
+        <img src="{{ c.image }}" class="rounded-circle insta-comment-avatar me-2" style="width:32px;height:32px;object-fit:cover;" alt="Profile picture of {{ c.user }}.">
         {{ else }}
         <i class="bi bi-person-circle text-secondary insta-comment-avatar-icon me-2"></i>
         {{ endif }}

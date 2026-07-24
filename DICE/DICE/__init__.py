@@ -359,10 +359,32 @@ def preprocessing(df, config):
             if j not in all_comments or j in replies: 
                 # se un commento non esiste o è già stato reclamato come reply, non guardare proprio la sua lista di subcomments
                 continue
-            for ref in parse_refs(raw_subrefs.get(j, '')): #raw_subrefs = { 0: "1,2",  1: "",  2: "0" }
+            for ref in parse_refs(raw_subrefs.get(j, '')): #raw_subrefs = { 0: "1,2",  1: "",  2: "0" } -> parse_refs("1,2") = [1, 2] -> comment_0 ha come subcomments comment_1 e comment_2
                 if ref in all_comments and ref != j:      # must exist; no self-reference, cioè se ho errore di mettere un subcomment uguale al suo padre
                     replies.add(ref)
                     all_comments[j]['subcomments'].append(all_comments[ref])
+
+        # CYCLE: RESOLVED! comment_0 -> comment_1 / comment_1 -> comment_0
+        # all_comments = {0: {..., 'subcomments': []}, 1: {..., 'subcomments': []}} 
+        # raw_subrefs = {0: "1", 1: "0"}
+        # ----------ciclo 1---------------
+        # comment_0: ref = 1 -> comment_1 in all_comments and comment_1 != comment_0 -> ok
+        # replies = {1} ; all_comments[0]['subcomments'] = [comment_1]
+        # ----------ciclo 2---------------
+        # comment_1: WARNING! comment_1 in replies -> skip -> comment_0 trattato come top-level, comment_1 come reply
+
+        # BACKWARD REFERENCE: WARNING! comment_0 -> comment_1 / comment_2 -> comment_0
+        # all_comments = {0: {..., 'subcomments': []}, 1: {..., 'subcomments': []}, 2: {..., 'subcomments': []}}
+        # raw_subrefs = {0: "1", 1: "", 2: "0"}
+        # ----------ciclo 1---------------
+        # comment_0: ref = 1 -> comment_1 in all_comments and comment_1 != comment_0 -> ok
+        # replies = {1} ; all_comments[0]['subcomments'] = [comment_1]
+        # ----------ciclo 2---------------
+        # comment_1: no subcomments -> skip -> only a subcomment of comment_0
+        # ----------ciclo 3---------------
+        # comment_2: ref = 0 -> comment_0 in all_comments and comment_0 != comment_2 -> ok
+        # replies = {1, 0} ; all_comments[2]['subcomments'] = [comment_0]
+        # WARNING! comment_0 is a top-level, comment_1 will not be shown at all, deleted from the comment_0 subcomments list
 
         # 4) SAFETY NET for a malformed CSV: a "backward" reference, i.e. a comment citing an EARLIER
         #    slot that was already processed as a parent. Example: comment_0 -> comment_1 AND
