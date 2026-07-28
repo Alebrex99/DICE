@@ -146,6 +146,12 @@ full-height {
 .comment-like-icon.bi-heart-fill.text-danger {
     color: #ed4956 !important;   /* Instagram red */
 }
+.insta-liked-author-heart {
+    font-size: 11px;
+    color: #ed4956;   /* same Instagram red as the like button */
+    margin-left: 2px;
+}
+
 
 /* Instagram comment badges */
 .insta-comment-verified { color: #3897f0; font-size: 12px; }   /* IG verified blue */

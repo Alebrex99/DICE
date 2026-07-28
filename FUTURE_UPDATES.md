@@ -37,9 +37,10 @@ df['image_available'] = df['pic_available'] & ~df['is_video']
 
 **Instagram comments — `T_Item_Insta.html` + `T_Insta_Comment.html` + `insta_comments.js`**
 - Static comments per post come from the CSV (`comment_i`, `comment_user_i`, `comment_image_i`, plus
-  `verified_user_comment_i`, `comment_time_i`, `comment_liked_author_i`, `pinned_comment_i`,
-  `member_comment_i`, `subcomments_comment_i`). The slot count is **auto-detected** from the
-  `comment_<n>` columns, so adding a slot needs no code change. Booleans accept `1/true/vero/yes/x`.
+  `verified_user_comment_i`, `comment_time_i`, `comment_likes_count_i`, `comment_liked_author_i`,
+  `pinned_comment_i`, `member_comment_i`, `subcomments_comment_i`). The slot count is **auto-detected**
+  from the `comment_<n>` columns, so adding a slot needs no code change. Booleans accept `1/true/vero/yes/x`;
+  `comment_likes_count_i` is a plain integer (empty → 0).
 - Rendered inside the Replies modal, between the post text and the "Add a comment…" input.
   Pinned comments sort first.
 - **Threaded replies (1 level):** `subcomments_comment_i` lists a comment's replies (delimiter `,`,
@@ -52,7 +53,9 @@ df['image_available'] = df['pic_available'] & ~df['is_video']
   "View replies (N)" expands them indented and toggles to "Hide replies".
 - One reusable card partial (`T_Insta_Comment.html`) included recursively via
   `{{ include "DICE/T_Insta_Comment.html" with c=sc }}` — identical markup at both levels.
-- Heart is red only when `comment_liked_author_i` is set; clicking moves the count only (nothing saved).
+- The like heart is **white by default** and turns **red only when the participant clicks it** (count ±1,
+  nothing saved). `comment_liked_author_i` shows a **static red heart** beside the "· Liked by Author" label
+  (it no longer colours the like heart). Per-comment counts come from `comment_likes_count_i` (manual int).
 
 ### Not yet implemented (sections below)
 - **A** — Video height cap (CSS)
@@ -282,8 +285,9 @@ If comment engagement is a study variable, add a collection layer (same 3-part p
    `C_Feed.get_form_fields()`, and optionally to `custom_export()`.
 
 ### Note
-The per-comment `like_count` seeds are randomized (0–200) per session, so they are display-only and not
-comparable across participants; only the participant's click deltas would be meaningful if collected.
+The per-comment `like_count` now comes from `comment_likes_count_i` (a manual integer, fixed per comment —
+no longer randomized). The seed itself carries no behavioural signal; only the participant's click deltas
+(which comments they liked/unliked) would be meaningful if collected.
 
 ---
 

@@ -4,17 +4,21 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.comment-like-button').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var countSpan = btn.querySelector('.comment-like-count');
+            var icon = btn.querySelector('.comment-like-icon');
             var count = parseInt(countSpan.textContent) || 0;
             var liked = btn.getAttribute('data-liked') === 'true';
 
             if (!liked) {
                 btn.setAttribute('data-liked', 'true');
                 countSpan.textContent = (count + 1).toString();
+                icon.classList.remove('bi-heart');
+                icon.classList.add('bi-heart-fill', 'text-danger');    // turn red on like
             } else {
                 btn.setAttribute('data-liked', 'false');
                 countSpan.textContent = (count - 1).toString();
+                icon.classList.remove('bi-heart-fill', 'text-danger'); // back to white
+                icon.classList.add('bi-heart');
             }
-            // Does NOT change heart colour — red is reserved for author-liked comments (render-time).
         });
     });
 

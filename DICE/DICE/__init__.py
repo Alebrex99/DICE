@@ -176,6 +176,14 @@ def to_bool(v):
     """CSV truthiness: 1 / true / vero / yes / x -> True, anything else (incl. empty/false/falso) -> False."""
     return str(v).strip().lower() in ('1', 'true', 'vero', 'yes', 'x')
 
+def to_int(v, default=0):
+    """CSV integer: '12' / '12.0' -> 12; empty/invalid -> default."""
+    try:
+        return int(float(str(v).strip()))
+    except (ValueError, TypeError):
+        return default
+
+
 # COMMENTS
 def highlight_entities(text):
     """Wrap #hashtags, $cashtags, @mentions and links in the same styling used for captions."""
@@ -304,7 +312,7 @@ def preprocessing(df, config):
         post_owner = str(row.get('username', '')).strip().lower()
 
         def cell(col):
-            v = row.get(col, '') # can return NaN if the column is missing, e.g., comment_3 when there are only 3 slots
+            v = row.get(col, '') # can return NaN if the column exists but the cell is empty. return '' if that col is missing entirely
             return '' if pd.isna(v) else str(v).strip()
 
         # 1) Build every non-empty comment slot, keyed by its slot index j
@@ -325,7 +333,7 @@ def preprocessing(df, config):
                 'user': user if user else 'unknown',                  # empty -> "unknown"
                 'image': image,                                       # empty -> template icon fallback
                 'image_available': is_url(image),
-                'like_count': int(np.random.randint(0, 201)),         # random 0-200
+                'like_count': to_int(cell(f'comment_likes_count_{j}')),         # empty -> manual count from CSV (empty -> 0)
                 'verified': to_bool(cell(f'verified_user_comment_{j}')),
                 'time': cell(f'comment_time_{j}'),                    # empty -> "" (no timestamp)
                 'liked_by_author': to_bool(cell(f'comment_liked_author_{j}')),  # red heart + "· Liked by Author"

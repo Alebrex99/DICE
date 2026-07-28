@@ -60,7 +60,8 @@ SESSION_CONFIG_DEFAULTS = dict(
     study_name = 'A study about social media',
     channel_type = 'Twitter',
     #survey_link = 'https://unisg.qualtrics.com/jfe/form/SV_0DnMoLpM0VxjhrM', #https://polimi.eu.qualtrics.com/jfe/form/SV_eeS0tFcikR5hSrs
-    survey_link = 'https://polimi.eu.qualtrics.com/jfe/form/SV_eeS0tFcikR5hSrs',
+    #survey_link = 'https://polimi.eu.qualtrics.com/jfe/form/SV_eeS0tFcikR5hSrs',
+    survey_link = '',
     dwell_threshold = 75,
     story_duration = 7,
     url_param = 'PROLIFIC_PID',
@@ -69,8 +70,8 @@ SESSION_CONFIG_DEFAULTS = dict(
     briefing = '', # '<h5>This could be your briefing</h5><p>Use HTML syntax to format your content to your liking.</p>',
     consent_form = '',
     #data_path=  "https://raw.githubusercontent.com/DICE-app/sample-feeds/refs/heads/main/feeds/sample_2x2_brand_safety.csv", #'DICE/static/data/sample_tweets.csv', #'DICE/static/data/9gag.csv', #  "https://raw.githubusercontent.com/Howquez/DICE/main/studies/frequency_capping/stimuli/brazil_pretest.csv",
-    #data_path = "https://raw.githubusercontent.com/Alebrex99/DICE/main/DICE/DICE/static/data/sample_feed.csv",
-    data_path=  "DICE/static/data/sample_feed_comments.csv", #'DICE/static/data/sample_tweets.csv', #'DICE/static/data/9gag.csv', #  "https://raw.githubusercontent.com/Howquez/DICE/main/studies/frequency_capping/stimuli/brazil_pretest.csv",
+    data_path = "https://raw.githubusercontent.com/Alebrex99/DICE/main/DICE/DICE/static/data/sample_feed_comments.csv",
+    #data_path=  "DICE/static/data/sample_feed_comments.csv", #'DICE/static/data/sample_tweets.csv', #'DICE/static/data/9gag.csv', #  "https://raw.githubusercontent.com/Howquez/DICE/main/studies/frequency_capping/stimuli/brazil_pretest.csv",
     delimiter=';',
     sort_by='datetime',
     condition_col='condition',
@@ -88,6 +89,14 @@ SESSION_CONFIG_DEFAULTS = dict(
 
 PARTICIPANT_FIELDS = ['tweets', 'finished']
 SESSION_FIELDS = ['prolific_completion_url', 'completion_code']
+
+ROOMS = [
+    dict(
+        name='dice',                       # va nell'URL: /room/dice/
+        display_name='DICE Instagram study',
+    ),
+]
+
 
 # ISO-639 code
 # for example: de, fr, ja, ko, zh-hans

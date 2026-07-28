@@ -22,21 +22,16 @@
                 <span class="fw-semibold">{{ c.user }}</span>
                 {{ if c.verified }}<i class="bi bi-patch-check-fill insta-comment-verified"></i>{{ endif }}
                 {{ if c.time }}<span class="text-muted" style="font-size: 11px;">{{ c.time }}</span>{{ endif }}
-                {{ if c.liked_by_author }}<span class="text-muted" style="font-size: 11px;">· Liked by Author</span>{{ endif }}
-                {{ if c.is_author }}<span class="text-muted" style="font-size: 11px;">· Author</span>{{ endif }}
+                {{ if c.liked_by_author }}<span class="text-muted" style="font-size: 11px;">· Liked by Author <i class="bi bi-heart-fill insta-liked-author-heart"></i></span>{{ endif }}                {{ if c.is_author }}<span class="text-muted" style="font-size: 11px;">· Author</span>{{ endif }}
             </div>
 
             <!-- Comment text -->
             <span>{{ c.text }}</span>
         </div>
 
-        <!-- Like button: red ONLY if author liked it (static); click = count only -->
+        <!-- Like button: always white by default; turns red only when the participant clicks it (JS) -->
         <div class="comment-like-button ms-2 text-center" data-liked="false">
-            {{ if c.liked_by_author }}
-            <span class="bi bi-heart-fill text-danger comment-like-icon d-block"></span>
-            {{ else }}
             <span class="bi bi-heart comment-like-icon d-block"></span>
-            {{ endif }}
             <span class="comment-like-count" style="font-size: 11px;">{{ c.like_count }}</span>
         </div>
     </div>
