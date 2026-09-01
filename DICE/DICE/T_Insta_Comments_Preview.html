@@ -1,0 +1,16 @@
+<!-- Preview commenti sotto al post: primi 4, solo se view_direct_comments è attivo -->
+{{ if i.view_direct_comments }}
+    {{ if i.comments_preview }}
+    <div class="insta-comments-preview mt-2">
+        <div class="text-muted mb-1" style="font-size: 12px; cursor: pointer;"
+            data-bs-toggle="modal" data-bs-target="#replyModal_{{ i.doc_id }}">
+            View all {{ i.replies }} comments
+        </div>
+        {{ for c in i.comments_preview }}
+        <div class="mb-1" style="font-size: 13px; line-height: 1.3;">
+            <span class="fw-semibold">{{ c.user }}</span>{{ if c.verified }} <i class="bi bi-patch-check-fill insta-comment-verified"></i>{{ endif }} <span>{{ c.text }}</span>
+        </div>
+        {{ endfor }}
+    </div>
+    {{ endif }}
+{{ endif }}

@@ -431,6 +431,16 @@ def preprocessing(df, config):
     # riga 2 (post 2): [{'text': '50M Jobseekers. <br><br> 150+ Job Boards. <br><br> One Click.', 'user': '9GAG', 'image': '', 'image_available': False, 'like_count': 0}, { ... }, { ... }, ...]
     # ---------------------------------------------------------------------------
 
+    # VIEW DIRECT COMMENTS
+        # Flag per-post: mostra i primi commenti anche sotto il post (non solo nel modale).
+    if 'view_direct_comments' in df.columns:
+        df['view_direct_comments'] = df['view_direct_comments'].apply(to_bool)
+    else:
+        df['view_direct_comments'] = False
+    # Primi 4 commenti top-level per la preview sotto al post
+    # (list-comprehension come per 'comments', per evitare l'espansione in colonne di pandas)
+    df['comments_preview'] = [cs[:4] for cs in df['comments']]
+
     return df
 
 
