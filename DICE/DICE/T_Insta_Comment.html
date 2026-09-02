@@ -39,10 +39,10 @@
     <!-- Threaded replies (1 level). build_comments guarantees a reply's list is empty, so this
          block never renders for a reply and the recursion stops by itself. -->
     {{ if c.subcomments }}
-    <button type="button" class="view-replies-btn" data-target="subreplies_{{ i.doc_id }}_{{ c.idx }}" data-count="{{ c.sub_count }}">
+    <button type="button" class="view-replies-btn" data-target="subreplies_{{ ns }}_{{ i.doc_id }}_{{ c.idx }}" data-count="{{ c.sub_count }}">
         <span class="view-replies-label">View replies ({{ c.sub_count }})</span>
     </button>
-    <div class="insta-subcomments" id="subreplies_{{ i.doc_id }}_{{ c.idx }}" style="display: none;">
+    <div class="insta-subcomments" id="subreplies_{{ ns }}_{{ i.doc_id }}_{{ c.idx }}" style="display: none;">
         {{ for sc in c.subcomments }}
         {{ include "DICE/T_Insta_Comment.html" with c=sc }}
         {{ endfor }}

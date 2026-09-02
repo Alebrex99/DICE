@@ -220,7 +220,7 @@
                         {{ if i.comments }}
                         <div class="insta-comments mb-3">
                             {{ for c in i.comments }}
-                            {{ include "DICE/T_Insta_Comment.html" }}
+                            {{ include "DICE/T_Insta_Comment.html" with ns="modal" }}
                             {{ endfor }}
                         </div>
                         {{ endif }}
