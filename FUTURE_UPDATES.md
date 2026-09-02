@@ -56,6 +56,16 @@ df['image_available'] = df['pic_available'] & ~df['is_video']
 - The like heart is **white by default** and turns **red only when the participant clicks it** (count ±1,
   nothing saved). `comment_liked_author_i` shows a **static red heart** beside the "· Liked by Author" label
   (it no longer colours the like heart). Per-comment counts come from `comment_likes_count_i` (manual int).
+- **Under-post comment preview:** the post-level flag `view_direct_comments` (bool via `to_bool`, placed right
+  after `sequence`) renders comments **directly under the post using the SAME card as the modal** (identical
+  style + interactions + working "View replies"/subcomments), in addition to the modal; empty/false keeps the
+  modal-only behavior. A companion integer **`preview_comments`** sets how many **parent** comments show
+  (N → first N, all if it exceeds the total; `0`/empty → none; `<0` → all). `preprocessing` derives
+  `view_direct_comments`, `preview_comments` and `comments_preview`; the
+  preview renders via `T_Insta_Comments_Preview.html`, which includes `T_Insta_Comment.html`. The card's
+  `subreplies_*` ids are **namespaced** via an `ns` include variable (`"modal"` vs `"preview"`) so the two
+  renderings don't clash. Known limit: the two copies are independent DOM nodes → their like/expand state is
+  not synced.
 
 ### Not yet implemented (sections below)
 - **A** — Video height cap (CSS)

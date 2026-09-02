@@ -99,3 +99,22 @@ with a "View replies (2)" button; comment_5 and comment_6 appear **only** indent
 **General fallback rule:** if `comment_i`, `comment_user_i`, and `comment_image_i` are all empty, that comment slot is skipped entirely (treated as unused for that post).
 
 **Note:** the number of filled comment columns does not need to match the post's "replies" count — that will be checked manually at data-entry time.
+
+---
+
+## 5. Direct comment preview under the post — `view_direct_comments` (IMPLEMENTED)
+
+A **post-level** CSV column (one value per row), placed **right after `sequence`** and **before** the comment
+slots, boolean via the usual truthy values (`1`/`true`/`vero`/`yes`/`x`).
+
+- **TRUE** → besides the 💬 modal, the post renders comments **directly under the post using the exact same
+  cards as the modal** — identical style **and** interactions (avatars, badges, "· Liked by Author",
+  click-to-like heart, and working "View replies"/subcomments) — preceded by a "View all N comments" line that
+  opens the modal for the rest. How many **parent** comments appear is set by the companion integer column
+  **`preview_comments`**: **N>0** → first N (all if N exceeds the total); **0 or empty** → none; **<0** → all.
+- **Empty / false (`view_direct_comments`)** → unchanged: comments appear **only** in the modal.
+- Backend: `preprocessing` converts `view_direct_comments` via `to_bool` and `preview_comments` via `to_int`,
+  then derives `comments_preview` (the chosen count of `comments`). Rendered by `T_Insta_Comments_Preview.html` (included in
+  both post branches of `T_Item_Insta.html`), which reuses `T_Insta_Comment.html`. The card's `subreplies_*`
+  ids are namespaced via an `ns` include variable (`"modal"` vs `"preview"`) so preview and modal don't clash.
+  Known limit: the two copies are independent DOM nodes, so their like/expand state is not synced.

@@ -17,6 +17,26 @@ post. Top to bottom, the modal shows:
 2. the list of comments for that post (from the CSV),
 3. the "Add a comment…" input.
 
+**Optional — the comments repeated directly under the post (`view_direct_comments`).** This is a **post-level**
+column (one value per row, placed right after `sequence`, *before* the comment slots), boolean via the usual
+values (`1`/`true`/`vero`/`yes`/`x`). When it is **true**, the post renders comments **directly under it using
+the exact same cards as the modal** — identical style **and** interactions (avatars, badges, "· Liked by
+Author", the click-to-like heart, and working **"View replies"/subcomments**) — preceded by a "View all N
+comments" line that opens the modal for the rest. When **empty/false**, nothing changes: comments appear
+**only** in the 💬 modal.
+
+**How many are shown — `preview_comments`** (a companion **post-level** integer column, right after
+`view_direct_comments`). It counts **parent (top-level) comments only** — subcomments travel nested under their
+shown parent and are not counted:
+- **N > 0** → the first N parents (pinned first); if N exceeds the total, **all** are shown;
+- **0 or empty/invalid** → **no** preview (even if `view_direct_comments` is true) — the default is `0`;
+- **< 0** → **all** parents.
+
+> ℹ️ The same comment is rendered **twice** (preview + modal) as two independent DOM nodes, so liking/expanding
+> in the preview is **not** synced with the modal copy (and vice-versa). Under the hood, the shared card's
+> `subreplies_*` ids are namespaced via an `ns` include variable (`"modal"` vs `"preview"`) so the two never
+> clash.
+
 ---
 
 ## 2. How comment slots work
@@ -177,8 +197,9 @@ Renders as: comment_0 (verified, "2w") and comment_1 at the top level; comment_1
 
 | File | Role |
 |---|---|
-| `DICE/DICE/__init__.py` → `build_comments()` | Parses the CSV columns into the comment model + resolves threading. |
+| `DICE/DICE/__init__.py` → `build_comments()` / `preprocessing()` | Parses the CSV into the comment model + resolves threading; `preprocessing` also derives `view_direct_comments` (bool), `preview_comments` (int) and `comments_preview` (the chosen count). |
 | `DICE/DICE/T_Insta_Comment.html` | The reusable comment card (used for both comments and replies). |
-| `DICE/DICE/T_Item_Insta.html` | Includes the card list inside the Comments modal. |
+| `DICE/DICE/T_Item_Insta.html` | Includes the card list inside the Comments modal, and the under-post preview. |
+| `DICE/DICE/T_Insta_Comments_Preview.html` | Under-post preview: the **same** comment cards as the modal (count = `preview_comments`, via `ns="preview"`), shown when `view_direct_comments` is set. |
 | `DICE/DICE/static/js/insta_comments.js` | Heart toggle + "View replies" expand/collapse (frontend only). |
 | `DICE/DICE/static/css/styles.css` | Comment / badge / reply styling (`.insta-comment*`, `.view-replies-btn`). |

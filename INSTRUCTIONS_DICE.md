@@ -132,7 +132,8 @@ One row per CSV column, in the exact order they appear. **Two kinds of booleans:
 (`verified_user_comment_i`, `comment_liked_author_i`, `pinned_comment_i`, `member_comment_i`) go through
 `to_bool` → accept `VERO` / `1` / `true` / `yes` / `x` (anything else = false). The **2 post flags**
 (`sponsored`, `commented_post`) are **not** converted → they need a plain **numeric `1` / `0`** — `VERO`
-does **not** work for these. The **comment block** (9 columns) repeats identically for each slot `i` = `0`…`5`.
+does **not** work for these. (The post flag `view_direct_comments` **does** use `to_bool`, so `VERO`/`1`/… work.)
+The **comment block** (10 columns) repeats identically for each slot `i` = `0`…`5`.
 
 | # | CSV column | What to write (format / example) | Type | What it shows / does | Position | Fallback if empty |
 |---|---|---|---|---|---|---|
@@ -154,17 +155,19 @@ does **not** work for these. The **comment block** (9 columns) repeats identical
 | 16 | `target` | URL | URL | click-through link of a sponsored post's CTA & media | "Learn more" button + media link | — (used only if `sponsored`) |
 | 17 | `condition` | e.g. `A` / `B` | string | between-subjects A/B label — filters which posts a participant sees (column name set by `condition_col`) | not shown (assignment) | post shown to everyone |
 | 18 | `sequence` | integer, e.g. `1` | int | pins the post to a fixed feed position; the rest are shuffled around it | feed order | random position |
+| 19 | `view_direct_comments` | `VERO`/`1`/`true`/`yes`/`x` (post-level flag; **uses `to_bool`**, unlike `sponsored`/`commented_post`) | bool | when TRUE, renders comments **directly under the post using the exact same cards as the modal** (avatars, badges, like button, working "View replies"/subcomments) + a "View all N comments" line, **in addition to** the 💬 modal — how many are shown is set by `preview_comments` | below the caption/timestamp, inside the post card | **empty/false → current behavior**: comments only via the 💬 modal, no preview |
+| 20 | `preview_comments` | integer (post-level; used only when `view_direct_comments` is TRUE) | int | **how many parent (top-level) comments** the preview shows: **N > 0** → first N (all if N exceeds the total); **0 or empty/invalid** → none; **< 0** → all. Subcomments aren't counted (they travel nested under their shown parent) | sets the preview count | **empty/absent → none (0)** |
 | | **— COMMENT BLOCK — repeats for each slot `i` = `0`…`5` (in the Comments modal) —** | | | | | |
-| 19 | `comment_i` | free text; **same highlighting as post `text`** — `#hashtag` `@mention` `$cashtag` + links | string | comment text | comment body | empty text `""` |
-| 20 | `comment_user_i` | e.g. `giulia` | string | commenter username | top of comment, next to avatar | `"unknown"` |
-| 21 | `comment_image_i` | avatar URL | URL | commenter avatar photo | left edge of the comment | Bootstrap person icon |
-| 22 | `verified_user_comment_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | blue verified ✓ | right of the username | no ✓ |
-| 23 | `comment_time_i` | `2w`, `now`, `3m`, `1y` | string | timestamp (shown as-is, no parsing) | username line, right of ✓ | no timestamp |
-| 24 | `comment_likes_count_i` | integer, e.g. `128` | int | number shown next to the like heart (set manually per comment) | under the heart, right of the comment | `0` |
-| 25 | `comment_liked_author_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | "· Liked by Author" **+ a static red heart** next to the label (does **not** colour the clickable like heart) | on the username line, after the timestamp | no label, no red heart |
-| 26 | `pinned_comment_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | "📌 Pinned by Author" + comment hoisted to the top of the list | own line above username; list order | not pinned |
-| 27 | `member_comment_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | violet background + "Comment by Member" | whole-comment tint + label above username | normal comment |
-| 28 | `subcomments_comment_i` | `comment_5,comment_6` or just `5,6` (**forward refs**; separator `,` or `&`). ⚠️ **Only the digits are read** — any text wrapped around a number (e.g. `xyz_5`, `ninvuinviunv_5`) is still parsed as `comment_5`; a value with no digit is silently ignored | list | the replies nested under this comment → "View replies (N)" | expandable block indented under the comment | no replies |
+| 21 | `comment_i` | free text; **same highlighting as post `text`** — `#hashtag` `@mention` `$cashtag` + links | string | comment text | comment body | empty text `""` |
+| 22 | `comment_user_i` | e.g. `giulia` | string | commenter username | top of comment, next to avatar | `"unknown"` |
+| 23 | `comment_image_i` | avatar URL | URL | commenter avatar photo | left edge of the comment | Bootstrap person icon |
+| 24 | `verified_user_comment_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | blue verified ✓ | right of the username | no ✓ |
+| 25 | `comment_time_i` | `2w`, `now`, `3m`, `1y` | string | timestamp (shown as-is, no parsing) | username line, right of ✓ | no timestamp |
+| 26 | `comment_likes_count_i` | integer, e.g. `128` | int | number shown next to the like heart (set manually per comment) | under the heart, right of the comment | `0` |
+| 27 | `comment_liked_author_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | "· Liked by Author" **+ a static red heart** next to the label (does **not** colour the clickable like heart) | on the username line, after the timestamp | no label, no red heart |
+| 28 | `pinned_comment_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | "📌 Pinned by Author" + comment hoisted to the top of the list | own line above username; list order | not pinned |
+| 29 | `member_comment_i` | `VERO`/`1`/`true`/`yes`/`x` | bool | violet background + "Comment by Member" | whole-comment tint + label above username | normal comment |
+| 30 | `subcomments_comment_i` | `comment_5,comment_6` or just `5,6` (**forward refs**; separator `,` or `&`). ⚠️ **Only the digits are read** — any text wrapped around a number (e.g. `xyz_5`, `ninvuinviunv_5`) is still parsed as `comment_5`; a value with no digit is silently ignored | list | the replies nested under this comment → "View replies (N)" | expandable block indented under the comment | no replies |
 | | **— DERIVED (no CSV column — computed automatically) —** | | | | | |
 | D1 | *(· Author)* | — | derived | "· Author" label | username line, right of "Liked by Author" | shown when `comment_user_i` == post `username` |
 | D2 | *(like-heart click)* | — | derived | clicking the like heart toggles it **red↔white** and changes the count **±1** (frontend only, not saved) | the like heart | starts white; count from `comment_likes_count_i` |
@@ -209,6 +212,10 @@ plays a video at ≥50% visibility, pauses otherwise; pauses on tab-hide (no aut
 
 Comments render inside the **Comments modal** (💬 button): post text → comments → "Add a comment…" input.
 Each post row carries comments in fixed slots (`comment_0`, `comment_1`, …), auto-detected from the header.
+Set the post-level flag **`view_direct_comments`** (`VERO`/`1`/…) to also render comments **directly under the
+post using the exact same cards as the modal** (same style, like button, and working "View replies"/subcomments)
++ a "View all N comments" line. The companion integer **`preview_comments`** sets how many **parent** comments
+appear (**N** → first N, all if it exceeds the total; **0/empty** → none; **<0** → all). Flag off → comments only in the modal.
 Full authoring detail is in **`COMMENTS_INSTRUCTIONS.md`**; summary below.
 
 > ⚠️ **The comment counter is NOT the number of comments you added.** The number on a post's 💬 button is
@@ -218,7 +225,7 @@ Full authoring detail is in **`COMMENTS_INSTRUCTIONS.md`**; summary below.
 > "View all 128 comments"). Leaving `replies = 0` while adding comments shows **0** on the button even
 > though the comments still appear in the modal.
 
-### The 9 columns per slot `i` (exact CSV order) → effect → what is shown
+### The 10 columns per slot `i` (exact CSV order) → effect → what is shown
 
 | # | Column | Effect | Fallback if empty |
 |---|---|---|---|
